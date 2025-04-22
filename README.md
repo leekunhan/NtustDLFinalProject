@@ -63,6 +63,22 @@ python dog_breed_classifier.py
    - `training_history.png`：訓練過程曲線圖
    - `submission.csv`：預測結果（可用於提交）
 
+## 專案檔案說明
+
+| 檔案名稱 | 說明 |
+|---------|------|
+| `dog_breed_classifier.py` | 主要程式碼，包含資料處理、模型定義、訓練和預測流程 |
+| `README.md` | 專案說明文件，提供概述、使用方法和結果說明 |
+| `Changelog.md` | 變更日誌，記錄模型版本和改進歷史 |
+| `requirements.txt` | 依賴套件列表，指定所需的Python套件版本 |
+| `best_model.pth` | 訓練好的模型權重檔案，保存了驗證準確率最高的模型參數 |
+| `training_history.png` | 訓練過程曲線圖，顯示損失和準確率的變化 |
+| `firstSubmission.png` | 提交結果圖，顯示在Kaggle上的提交分數 |
+| `labels.csv` | 訓練集標籤檔案，包含每張圖片的ID和對應品種 |
+| `sample_submission.csv` | Kaggle提供的提交格式範例 |
+| `submission.csv` | 根據模型預測生成的提交檔案，用於Kaggle評分 |
+| `.gitignore` | Git版本控制忽略設定，排除不必要的檔案 |
+
 ## 效能
 
 模型在15個訓練周期後達到了良好的分類效果：
