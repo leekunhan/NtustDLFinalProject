@@ -1,28 +1,28 @@
 訓練摘要:
-完成的訓練周期: 37/50
-最佳驗證準確率: 0.8054
+完成的訓練周期: 45/50
+最佳驗證準確率: 0.8068
 訓練因早停機制提前結束
 
 錯誤率最高的十種狗品種:
-eskimo_dog: 0.7692
-american_staffordshire_terrier: 0.5333
-australian_terrier: 0.5238
-lhasa: 0.5000
-miniature_poodle: 0.5000
-rhodesian_ridgeback: 0.5000
-walker_hound: 0.5000
-lakeland_terrier: 0.4500
-appenzeller: 0.4375
-norwich_terrier: 0.4375
+eskimo_dog: 0.6923
+walker_hound: 0.6429
+miniature_poodle: 0.5625
+lhasa: 0.5556
+appenzeller: 0.5000
+staffordshire_bullterrier: 0.4375
+wire-haired_fox_terrier: 0.4375
+australian_terrier: 0.4286
+chesapeake_bay_retriever: 0.4118
+lakeland_terrier: 0.4000
 
 準確率最高的十種狗品種:
 african_hunting_dog: 1.0000
 border_terrier: 1.0000
 dhole: 1.0000
 irish_water_spaniel: 1.0000
-komondor: 1.0000
 leonberg: 1.0000
 otterhound: 1.0000
+papillon: 1.0000
 sussex_spaniel: 1.0000
 bernese_mountain_dog: 0.9565
-papillon: 0.9474
+basenji: 0.9545
