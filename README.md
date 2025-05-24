@@ -149,3 +149,11 @@ for example:
 Cross Entropy Loss = 0.63572 (越小越好)
 
 ### 分析
+
+#### 表現最差的犬種confusion matrix
+
+![表現最差的犬種confusion matrix](src/images/worst_breeds_confusion_matrix.png)
+
+#### 表現最差的犬種heatmap
+
+![表現最差的犬種heatmap](src/images/eskimo_dog_attention_heatmaps.png)
