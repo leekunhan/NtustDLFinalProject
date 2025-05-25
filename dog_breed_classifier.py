@@ -26,7 +26,7 @@ torch.manual_seed(42)
 np.random.seed(42)
 random.seed(42)
 
-NUM_EPOCHS = 50
+NUM_EPOCHS = 100
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -151,7 +151,7 @@ optimizer = optim.Adam([
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3, factor=0.5)
 
 # Training function
-def train_model(model, train_loader, valid_loader, criterion, optimizer, scheduler, num_epochs=10, patience=5):
+def train_model(model, train_loader, valid_loader, criterion, optimizer, scheduler, num_epochs=100, patience=10):
     best_val_acc = 0.0
     train_losses = []
     valid_losses = []
@@ -369,8 +369,8 @@ def analyze_model_performance():
     # Visualize best 10 dog breeds
     visualize_breed_samples(best_breeds, breed_results, "best")
     
-    # Generate confusion matrix for top 10 worst breeds
-    generate_confusion_matrix_for_worst_breeds(worst_breeds, all_labels, all_predictions)
+    # Generate confusion matrix for the worst performing breed only
+    generate_single_worst_breed_confusion_matrix(worst_breeds[0][0], model)
     
     # Generate heatmap for worst breed
     generate_heatmaps_for_worst_breed(worst_breeds[0][0], breed_results, model)
@@ -452,56 +452,116 @@ def visualize_breed_samples(breed_list, breed_results, category):
     plt.savefig(f"src/images/{category}_breeds_summary.png")
     plt.close()
 
-def generate_confusion_matrix_for_worst_breeds(worst_breeds, all_labels, all_predictions):
-    """Generate confusion matrix for top 10 worst breeds"""
-    print("Generating confusion matrix for top 10 worst breeds...")
+def generate_single_worst_breed_confusion_matrix(worst_breed, model):
+    """Generate confusion matrix for the worst performing breed only"""
+    print(f"Generating confusion matrix for {worst_breed}...")
     
-    # Get top 10 worst breeds names
-    worst_breed_names = [breed for breed, _ in worst_breeds]
-    worst_breed_indices = [breed_to_idx[breed] for breed in worst_breed_names]
+    model.eval()
+    worst_breed_idx = breed_to_idx[worst_breed]
     
-    # Filter out only include images from these 10 breeds
-    filtered_labels = []
-    filtered_predictions = []
+    # Create a data loader for the entire training set
+    full_train_dataset = DogBreedDataset(TRAIN_DIR, labels_df, transform=valid_transform)
+    full_train_loader = DataLoader(full_train_dataset, batch_size=32, shuffle=False, num_workers=4)
     
-    for true_label, pred_label in zip(all_labels, all_predictions):
-        if true_label in worst_breed_indices:
-            filtered_labels.append(true_label)
-            filtered_predictions.append(pred_label)
+    # Collect predictions for the worst breed
+    true_labels = []
+    predicted_labels = []
+    misclassified_breeds = set()
     
-    if len(filtered_labels) == 0:
-        print("No validation data found for top 10 worst performing dog breeds")
+    with torch.no_grad():
+        for inputs, labels, img_names in tqdm(full_train_loader, desc=f"Evaluating {worst_breed} samples"):
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs, 1)
+            
+            # Move data to CPU and convert to numpy array
+            labels_np = labels.cpu().numpy()
+            predicted_np = predicted.cpu().numpy()
+            
+            # Collect only samples where true label is the worst breed
+            for true_label, pred_label in zip(labels_np, predicted_np):
+                if true_label == worst_breed_idx:
+                    true_labels.append(true_label)
+                    predicted_labels.append(pred_label)
+                    if true_label != pred_label:
+                        misclassified_breeds.add(pred_label)
+    
+    if len(true_labels) == 0:
+        print(f"No samples found for {worst_breed}")
         return
     
-    # Create label mapping (map original indices to 0-9)
-    label_mapping = {idx: i for i, idx in enumerate(worst_breed_indices)}
-    mapped_labels = [label_mapping.get(label, -1) for label in filtered_labels]
-    mapped_predictions = [label_mapping.get(pred, -1) for pred in filtered_predictions]
+    print(f"Found {len(true_labels)} samples for {worst_breed}")
     
-    # Filter out items that mapping failed
-    valid_indices = [i for i, (l, p) in enumerate(zip(mapped_labels, mapped_predictions)) if l != -1]
-    mapped_labels = [mapped_labels[i] for i in valid_indices]
-    mapped_predictions = [mapped_predictions[i] for i in valid_indices]
+    # Get top misclassified breeds (limit to top 10 for readability)
+    misclass_counts = {}
+    for pred_label in predicted_labels:
+        if pred_label != worst_breed_idx:
+            if pred_label not in misclass_counts:
+                misclass_counts[pred_label] = 0
+            misclass_counts[pred_label] += 1
     
-    # Generate confusion matrix
-    cm = confusion_matrix(mapped_labels, mapped_predictions, labels=list(range(len(worst_breed_names))))
+    top_misclass = sorted(misclass_counts.items(), key=lambda x: x[1], reverse=True)[:10]
     
-    # Visualize confusion matrix
-    plt.figure(figsize=(12, 10))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=worst_breed_names, 
-                yticklabels=worst_breed_names,
+    # Include the correct breed and top misclassified breeds
+    relevant_indices = [worst_breed_idx] + [idx for idx, _ in top_misclass]
+    relevant_names = [idx_to_breed[idx] for idx in relevant_indices]
+    
+    print(f"Including {len(relevant_names)} breeds in confusion matrix:")
+    print(f"- Target breed: {worst_breed}")
+    print(f"- Top misclassified targets: {len(relevant_names) - 1}")
+    
+    # Create label mapping
+    label_mapping = {idx: i for i, idx in enumerate(relevant_indices)}
+    mapped_true = [label_mapping.get(label, -1) for label in true_labels]
+    mapped_pred = [label_mapping.get(pred, -1) for pred in predicted_labels]
+    
+    # Filter valid mappings
+    valid_indices = [i for i, (t, p) in enumerate(zip(mapped_true, mapped_pred)) if t != -1 and p != -1]
+    mapped_true = [mapped_true[i] for i in valid_indices]
+    mapped_pred = [mapped_pred[i] for i in valid_indices]
+    
+    # Generate confusion matrix (only one row since we only have one true breed)
+    cm = confusion_matrix(mapped_true, mapped_pred, labels=list(range(len(relevant_names))))
+    
+    # Create visualization
+    plt.figure(figsize=(max(10, len(relevant_names) * 0.8), 6))
+    
+    # Only show the first row (our target breed)
+    cm_row = cm[0:1, :]  # Keep as 2D array for heatmap
+    
+    sns.heatmap(cm_row, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=relevant_names, 
+                yticklabels=[worst_breed],
                 cbar_kws={'label': 'Number of Predictions'})
-    plt.title('Confusion Matrix for Top 10 Worst Performing Dog Breeds')
+    
+    plt.title(f'Confusion Matrix for {worst_breed}\n(Shows where {worst_breed} samples are classified)')
     plt.xlabel('Predicted Breed')
     plt.ylabel('True Breed')
     plt.xticks(rotation=45, ha='right')
     plt.yticks(rotation=0)
     plt.tight_layout()
-    plt.savefig('src/images/worst_breeds_confusion_matrix.png', dpi=300, bbox_inches='tight')
+    plt.savefig('src/images/worst_breed_confusion_matrix.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print("Confusion matrix saved to src/images/worst_breeds_confusion_matrix.png")
+    # Print detailed analysis
+    total_samples = len(true_labels)
+    correct_predictions = sum(1 for t, p in zip(true_labels, predicted_labels) if t == p)
+    accuracy = correct_predictions / total_samples if total_samples > 0 else 0
+    
+    print(f"\nDetailed analysis for {worst_breed}:")
+    print(f"Total samples: {total_samples}")
+    print(f"Correct predictions: {correct_predictions} ({accuracy:.1%})")
+    print(f"Misclassifications: {total_samples - correct_predictions}")
+    
+    print("\nTop misclassification targets:")
+    for i, (breed_name, count) in enumerate(zip(relevant_names[1:], cm_row[0, 1:]), 1):
+        if count > 0:
+            percentage = count / total_samples * 100
+            print(f"  {i}. {breed_name}: {count} times ({percentage:.1f}%)")
+    
+    print(f"Confusion matrix saved to src/images/worst_breed_confusion_matrix.png")
 
 def generate_heatmaps_for_worst_breed(worst_breed, breed_results, model):
     """Generate heatmap analysis for worst breed"""

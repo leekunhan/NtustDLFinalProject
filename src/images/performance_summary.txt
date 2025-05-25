@@ -1,9 +1,9 @@
-訓練摘要:
-完成的訓練周期: 45/50
-最佳驗證準確率: 0.8068
-訓練因早停機制提前結束
+Training summary:
+Completed training cycle: 45/100
+Best validation accuracy: 0.8068
+Training stopped early due to early stopping mechanism
 
-錯誤率最高的十種狗品種:
+Top 10 dog breeds with highest error rate:
 eskimo_dog: 0.6923
 walker_hound: 0.6429
 miniature_poodle: 0.5625
@@ -15,7 +15,7 @@ australian_terrier: 0.4286
 chesapeake_bay_retriever: 0.4118
 lakeland_terrier: 0.4000
 
-準確率最高的十種狗品種:
+Top 10 dog breeds with highest accuracy:
 african_hunting_dog: 1.0000
 border_terrier: 1.0000
 dhole: 1.0000
